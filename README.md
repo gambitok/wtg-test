@@ -59,6 +59,8 @@ php artisan migrate --seed
 
 The seeder creates two suppliers: `supplier-a` and `supplier-b`.
 
+Feature tests use the separate `housing_offers_testing` MySQL database. The database is created automatically by the MySQL initialization script when the Docker volume is created for the first time.
+
 ## Running the application locally
 
 Start the HTTP server:
@@ -90,7 +92,30 @@ GET  /api/properties
 POST /api/offers/{offer}/reservations
 ```
 
-Request examples and response formats will be documented here as the endpoints are implemented.
+### Create an import
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/imports \
+  -H 'Accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "supplier": "supplier-a",
+    "external_import_id": "import-2026-09-01-001",
+    "sent_at": "2026-09-01T10:00:00Z",
+    "offers": []
+  }'
+```
+
+The endpoint validates the request, creates a `pending` import, dispatches a queued Job, and immediately returns `202 Accepted`. The Job processes properties and offers asynchronously.
+
+### Get import status
+
+```bash
+curl http://127.0.0.1:8000/api/imports/{import} \
+  -H 'Accept: application/json'
+```
+
+The status can be `pending`, `processing`, `completed`, or `failed`.
 
 ## Design notes
 
