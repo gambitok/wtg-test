@@ -29,15 +29,29 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-Start MySQL with Docker Compose:
+Start the full Docker environment:
+
+```bash
+docker compose up --build -d
+```
+
+This starts the PHP application at `http://localhost:8000`, a separate queue worker, and MySQL. The application container connects to MySQL through the Compose service name `mysql`.
+
+If you run PHP locally instead, start only MySQL:
 
 ```bash
 docker compose up -d mysql
 ```
 
-The values in `.env.example` match this container. If MySQL is installed locally, change `DB_PORT` to `3306` and provide the appropriate credentials.
+The local `.env` values use port `3307`. If MySQL is installed locally, change `DB_PORT` to `3306` and provide the appropriate credentials.
 
-Run migrations and seed the database:
+With the Docker environment, run migrations and seed the database inside the application container:
+
+```bash
+docker compose exec app php artisan migrate --seed
+```
+
+When running PHP locally, use:
 
 ```bash
 php artisan migrate --seed
@@ -45,7 +59,7 @@ php artisan migrate --seed
 
 The seeder creates two suppliers: `supplier-a` and `supplier-b`.
 
-## Running the application
+## Running the application locally
 
 Start the HTTP server:
 
