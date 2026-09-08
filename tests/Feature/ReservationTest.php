@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Enums\ImportStatus;
 use App\Models\Import;
 use App\Models\Offer;
 use App\Models\Property;
@@ -116,38 +115,28 @@ class ReservationTest extends TestCase
      */
     private function createOffer(array $overrides = []): Offer
     {
-        $supplier = Supplier::create([
+        $supplier = Supplier::factory()->create([
             'code' => 'supplier-a',
             'name' => 'Supplier A',
         ]);
-        $property = Property::create([
+        $property = Property::factory()->create([
             'code' => 'BCN-0001',
             'name' => 'Barcelona Apartment',
             'city' => 'Barcelona',
         ]);
-        $import = Import::create([
-            'supplier_id' => $supplier->id,
-            'external_import_id' => 'import-'.uniqid(),
-            'sent_at' => now(),
-            'status' => ImportStatus::Completed,
-            'total_offers' => 1,
-            'processed_offers' => 1,
-            'payload' => ['offers' => []],
-            'completed_at' => now(),
-        ]);
 
-        return Offer::create(array_merge([
-            'supplier_id' => $supplier->id,
-            'import_id' => $import->id,
-            'property_id' => $property->id,
-            'external_id' => 'offer-'.uniqid(),
-            'check_in' => '2026-10-10',
-            'check_out' => '2026-10-15',
-            'max_guests' => 4,
-            'price' => 72500,
-            'currency' => 'EUR',
-            'available_units' => 2,
-            'expires_at' => now()->addDay(),
-        ], $overrides));
+        $import = Import::factory()
+            ->for($supplier)
+            ->create([
+                'total_offers' => 1,
+                'processed_offers' => 1,
+                'completed_at' => now(),
+            ]);
+
+        return Offer::factory()
+            ->for($supplier)
+            ->for($import)
+            ->for($property)
+            ->create($overrides);
     }
 }

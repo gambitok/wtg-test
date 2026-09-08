@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ImportStatus;
 use App\Jobs\ProcessImportJob;
+use App\Models\Import;
 use App\Models\Property;
 use App\Models\Supplier;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -183,6 +185,38 @@ class ImportTest extends TestCase
         $response
             ->assertUnprocessable()
             ->assertJsonValidationErrors('offers.0.check_out');
+    }
+
+    public function test_a_failed_job_marks_the_import_as_failed(): void
+    {
+        $import = Import::create([
+            'supplier_id' => Supplier::create([
+                'code' => 'supplier-a',
+                'name' => 'Supplier A',
+            ])->id,
+            'external_import_id' => 'import-failed',
+            'sent_at' => now(),
+            'status' => ImportStatus::Pending,
+            'total_offers' => 1,
+            'processed_offers' => 0,
+            'payload' => [
+                'offers' => [[
+                    'external_id' => 'offer-invalid',
+                    'property' => [],
+                ]],
+            ],
+        ]);
+
+        $this->expectException(\ErrorException::class);
+
+        try {
+            (new ProcessImportJob($import->id))->handle();
+        } finally {
+            $this->assertDatabaseHas('imports', [
+                'id' => $import->id,
+                'status' => ImportStatus::Failed->value,
+            ], 'mysql');
+        }
     }
 
     /**
