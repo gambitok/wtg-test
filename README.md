@@ -117,13 +117,38 @@ curl http://127.0.0.1:8000/api/imports/{import} \
 
 The status can be `pending`, `processing`, `completed`, or `failed`.
 
+### Search properties
+
+```bash
+curl 'http://127.0.0.1:8000/api/properties?city=Barcelona&check_in=2026-10-10&check_out=2026-10-15&guests=2&page=1&per_page=15' \
+  -H 'Accept: application/json'
+```
+
+The search filters offers by dates, guest capacity, availability, and expiration time. It returns one property row with the cheapest eligible offer for that property. The city filter is optional. `next`, `prev`, and `per_page` are returned for pagination.
+
+### Create a reservation
+
+```bash
+curl -X POST http://127.0.0.1:8000/api/offers/{offer}/reservations \
+  -H 'Accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "client_reference": "web-order-9f782b1c",
+    "customer_name": "John Smith",
+    "customer_email": "john@example.com"
+  }'
+```
+
+The endpoint returns `201 Created` and stores the offer price and currency on the reservation. An unavailable or expired offer returns `409 Conflict`.
+
 ## Design notes
 
 - An import is created by the HTTP request, while offer processing runs in a queued Job.
 - Import idempotency is enforced by a unique index on `supplier_id + external_import_id`.
 - Supplier offers are uniquely identified by `supplier_id + external_id`.
+- The property search ranks eligible offers with a MySQL 8 window function and filters the cheapest row in SQL before pagination.
 - Prices are stored as integers in the smallest currency unit.
-- Concurrent reservations of the last available unit will be protected by a database transaction and `SELECT ... FOR UPDATE` on the offer row.
+- Concurrent reservations of the last available unit are protected by a database transaction and `SELECT ... FOR UPDATE` on the offer row. Requests lock the current offer, check its units and expiration, create the reservation, and decrement the units before the transaction commits. A second transaction therefore sees the updated unit count and receives `409 Conflict`.
 
 ## Git
 
