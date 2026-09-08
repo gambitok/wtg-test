@@ -1,6 +1,6 @@
 # Housing Offers API
 
-REST API на Laravel для асинхронного імпорту пропозицій житла, пошуку найдешевшої актуальної пропозиції та безпечного бронювання.
+REST API built with Laravel for asynchronous housing offer imports, finding the cheapest current offer, and safely reserving available units.
 
 ## Stack
 
@@ -12,12 +12,12 @@ REST API на Laravel для асинхронного імпорту пропо�
 
 ## Requirements
 
-- PHP 8.4 або новіший PHP, сумісний із Laravel 12
+- PHP 8.4 or another PHP version compatible with Laravel 12
 - Composer 2.x
 - MySQL 8.4+
 - PHP extensions: `pdo_mysql`, `mbstring`, `openssl`, `ctype`, `tokenizer`, `xml`
 
-Для локального MySQL можна використати Docker Compose. Він запускає лише базу даних, а Laravel і queue worker працюють локально через PHP 8.4.
+Docker Compose can be used for the local MySQL instance. The Laravel application and queue worker run locally with PHP 8.4.
 
 ## Installation
 
@@ -29,29 +29,31 @@ cp .env.example .env
 php artisan key:generate
 ```
 
-Запустіть MySQL:
+Start MySQL with Docker Compose:
 
 ```bash
 docker compose up -d mysql
 ```
 
-Параметри в `.env.example` відповідають цьому контейнеру. Якщо MySQL встановлений локально, змініть `DB_PORT` на `3306` і вкажіть власні credentials.
+The values in `.env.example` match this container. If MySQL is installed locally, change `DB_PORT` to `3306` and provide the appropriate credentials.
 
-Після цього виконайте міграції та seeders:
+Run migrations and seed the database:
 
 ```bash
 php artisan migrate --seed
 ```
 
+The seeder creates two suppliers: `supplier-a` and `supplier-b`.
+
 ## Running the application
 
-Запустіть HTTP-сервер:
+Start the HTTP server:
 
 ```bash
 php artisan serve
 ```
 
-В окремому терміналі запустіть worker для асинхронного імпорту:
+In a separate terminal, start the queue worker for asynchronous imports:
 
 ```bash
 php artisan queue:work database --tries=1
@@ -65,7 +67,7 @@ php artisan test
 
 ## API
 
-Основні endpoints:
+Main endpoints:
 
 ```text
 POST /api/imports
@@ -74,16 +76,16 @@ GET  /api/properties
 POST /api/offers/{offer}/reservations
 ```
 
-Приклади запитів і формат відповідей будуть наведені нижче після реалізації відповідних endpoint-ів.
+Request examples and response formats will be documented here as the endpoints are implemented.
 
 ## Design notes
 
-- Імпорт створюється HTTP-запитом, а пропозиції обробляються через queued Job.
-- Ідемпотентність імпорту забезпечується унікальним індексом на `supplier_id + external_import_id`.
-- Пропозиції постачальника ідентифікуються унікальною комбінацією `supplier_id + external_id`.
-- Ціна зберігається як ціле число у мінорних одиницях валюти.
-- Захист від одночасного бронювання останньої одиниці буде реалізований транзакцією та `SELECT ... FOR UPDATE` для рядка пропозиції.
+- An import is created by the HTTP request, while offer processing runs in a queued Job.
+- Import idempotency is enforced by a unique index on `supplier_id + external_import_id`.
+- Supplier offers are uniquely identified by `supplier_id + external_id`.
+- Prices are stored as integers in the smallest currency unit.
+- Concurrent reservations of the last available unit will be protected by a database transaction and `SELECT ... FOR UPDATE` on the offer row.
 
 ## Git
 
-Проєкт розвивається окремими логічними комітами: інфраструктура, імпорт, пошук, бронювання, тести та документація.
+The project is developed through separate logical commits for infrastructure, imports, search, reservations, tests, and documentation.
